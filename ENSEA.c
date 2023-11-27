@@ -11,15 +11,24 @@ void printWelcomeMessage() {
     write(STDOUT_FILENO, "Pour quitter, tapez 'exit'.\n", 28);
 }
 
-void printPrompt() {
-    write(STDOUT_FILENO, "enseash % ", 11);
+void printPrompt(int exitCode, int signalCode) {
+    if (WIFEXITED(exitCode)) {
+        printf("enseash [exit:%d] %% ", WEXITSTATUS(exitCode));
+    } else if (WIFSIGNALED(exitCode)) {
+        printf("enseash [sign:%d] %% ", WTERMSIG(exitCode));
+    } else {
+        write(STDOUT_FILENO, "enseash % ", 11);
+    }
 }
 
 int main() {
     printWelcomeMessage();
 
     while (1) {
-        printPrompt();
+        int exitCode = 0;
+        int signalCode = 0;
+
+        printPrompt(exitCode, signalCode);
 
         char input[MAX_INPUT_SIZE];
         if (fgets(input, sizeof(input), stdin) == NULL) {
@@ -28,7 +37,7 @@ int main() {
             break;
         }
 
-        input[strcspn(input, "\n")] = '\0';  // delete the new caractere of the ligne 
+        input[strcspn(input, "\n")] = '\0';  // delete the new carater of the ligne
 
         if (strcmp(input, "exit") == 0) {
             write(STDOUT_FILENO, "Bye bye...\n", 11);
@@ -39,18 +48,13 @@ int main() {
             int child_pid = fork();
 
             if (child_pid == 0) {
-                // the Processus of the enfant
+                // enfant Process 
                 execlp(input, input, (char *)NULL);
                 perror("Erreur lors de l'exécution de la commande");
                 exit(EXIT_FAILURE);
             } else if (child_pid > 0) {
-                // the Processus of the parent
-                int status;
-                waitpid(child_pid, &status, 0);
-
-                char statusMessage[50];
-                snprintf(statusMessage, sizeof(statusMessage), "Statut de sortie: %d\n", status);
-                write(STDOUT_FILENO, statusMessage, strlen(statusMessage));
+                // parent Process 
+                waitpid(child_pid, &exitCode, 0);
             } else {
                 perror("Erreur lors de la création du processus fils");
                 exit(EXIT_FAILURE);
