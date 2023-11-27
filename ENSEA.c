@@ -1,30 +1,56 @@
 #include <stdio.h>
+#include <sys/wait.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#define MAX_INPUT_SIZE 1024
+
+void printWelcomeMessage() {
+    write(STDOUT_FILENO, "Bienvenue dans le Shell ENSEA.\n", 30);
+    write(STDOUT_FILENO, "Pour quitter, tapez 'exit'.\n", 28);
+}
+
+void printPrompt() {
+    write(STDOUT_FILENO, "enseash % ", 11);
+}
 
 int main() {
-    puts("Bienvenue dans le Shell ENSEA.");
-    puts("Pour quitter, tapez 'exit'.");
+    printWelcomeMessage();
 
     while (1) {
-        fputs("enseash % ", stdout);                                //  Display the prompt
-       
-        char x[1024];
-        fgets(x, sizeof(x), stdin);
-        x[strcspn(x, "\n")] = '\0';                         // Remove the newline character
+        printPrompt();
 
+        char input[MAX_INPUT_SIZE];
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            perror("Erreur de lecture de l'entrée");
+            exit(EXIT_FAILURE);
+        }
 
+        input[strcspn(input, "\n")] = '\0';  // delete the new carater of the ligne
 
-        if (strcmp(x, "exit") == 0) {                            // Check the command for exit
-            puts("Au revoir !");
+        if (strcmp(input, "exit") == 0) {
+            write(STDOUT_FILENO, "Au revoir !\n", 12);
             break;
         }
 
-        puts("Exécution de la commande: ");                         // Execute the command and display information
-        int y= system(x);
+        if (strlen(input) > 0) {
+            int child_pid = fork();
 
-        printf("Statut de sortie: %d\n", y);              // // Display the exit status
+            if (child_pid == 0) {
+                //  process of the Child
+                execlp(input, input, (char *)NULL);
+                exit(EXIT_FAILURE);
+            } else if (child_pid > 0) {
+                // process of the Parent
+                int status;
+                waitpid(child_pid, &status, 0);
+
+            } else {
+                perror("Erreur lors de la création du processus fils");
+                exit(EXIT_FAILURE);
+            }
+        }
     }
 
     return 0;
