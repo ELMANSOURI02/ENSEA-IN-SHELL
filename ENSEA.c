@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <sys/wait.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -23,14 +23,15 @@ int main() {
 
         char input[MAX_INPUT_SIZE];
         if (fgets(input, sizeof(input), stdin) == NULL) {
-            perror("Erreur de lecture de l'entrée");
-            exit(EXIT_FAILURE);
+            // If fgets returns NULL, the user either used <Ctrl>+d or there is an error.
+            write(STDOUT_FILENO, "Bye bye...\n", 11);
+            break;
         }
 
-        input[strcspn(input, "\n")] = '\0';  // delete the new carater of the ligne
+        input[strcspn(input, "\n")] = '\0';  // delete the new caractere of the ligne 
 
         if (strcmp(input, "exit") == 0) {
-            write(STDOUT_FILENO, "Au revoir !\n", 12);
+            write(STDOUT_FILENO, "Bye bye...\n", 11);
             break;
         }
 
@@ -38,14 +39,18 @@ int main() {
             int child_pid = fork();
 
             if (child_pid == 0) {
-                //  process of the Child
+                // the Processus of the enfant
                 execlp(input, input, (char *)NULL);
+                perror("Erreur lors de l'exécution de la commande");
                 exit(EXIT_FAILURE);
             } else if (child_pid > 0) {
-                // process of the Parent
+                // the Processus of the parent
                 int status;
                 waitpid(child_pid, &status, 0);
 
+                char statusMessage[50];
+                snprintf(statusMessage, sizeof(statusMessage), "Statut de sortie: %d\n", status);
+                write(STDOUT_FILENO, statusMessage, strlen(statusMessage));
             } else {
                 perror("Erreur lors de la création du processus fils");
                 exit(EXIT_FAILURE);
