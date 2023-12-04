@@ -33,8 +33,8 @@ void printPrompt(int exitCode, int signalCode, long elapsedTime) {
     }
 }
 
-// Function to measure the execution time of the command and execute the command
-void measureAndExecute(char* command) {
+// Function to measure the execution time of the command and execute the command with arguments
+void measureAndExecute(char* args[]) {
     struct timespec start, end;
     long elapsedTime;
 
@@ -45,13 +45,16 @@ void measureAndExecute(char* command) {
     int child_pid = fork();
 
     if (child_pid == 0) {
-        // Child process: execute the command using execlp
-        execlp(command, command, (char *)NULL);
+        // Child process: execute the command with arguments using execvp
+        execvp(args[0], args);
         
+        // Exit the child process with a failure code in case of an error
+        perror("Error during command execution");
         exit(EXIT_FAILURE);
     } else if (child_pid > 0) {
         // Parent process
         int status;
+        // Wait for the child process to finish and get the status
         waitpid(child_pid, &status, 0);
 
         // Record the end time using clock_gettime
@@ -59,23 +62,21 @@ void measureAndExecute(char* command) {
 
         // Calculate the elapsed time in milliseconds
         elapsedTime = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
-      
+
         // Print the shell prompt with exit code, signal code, and elapsed time
         printPrompt(status, 0, elapsedTime);
     } else {
         // Error handling for fork failure
+        perror("Error creating child process");
         exit(EXIT_FAILURE);
     }
-    
 }
-
-// Main function
 int main() {
     // Print the welcome message at the start
     printWelcomeMessage();
 
     while (1) {
-        
+        // Print the shell prompt with default values for exit code, signal code, and elapsed time
         printPrompt(0, 0, 0);
 
         // Read user input
@@ -98,12 +99,25 @@ int main() {
 
         // Check if the input is not empty
         if (strlen(input) > 0) {
-            // Measure the time of command execution and execute the command
-            measureAndExecute(input);
+            // Tokenize the input into command and arguments
+            char *tokens[MAX_INPUT_SIZE];
+            int tokenCount = 0;
+
+            // Tokenize the input using space as a delimiter
+            char *token = strtok(input, " ");
+            while (token != NULL && tokenCount < MAX_INPUT_SIZE - 1) {
+                tokens[tokenCount++] = token;
+                token = strtok(NULL, " ");
+            }
+            tokens[tokenCount] = NULL;  // Set the last element to NULL for execvp
+
+            // Measure the time of command execution and execute the command with arguments
+            measureAndExecute(tokens);
         }
     }
-    
 
     return 0;
 }
+
+
 
